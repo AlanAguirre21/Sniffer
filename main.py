@@ -1,10 +1,11 @@
-from scapy.all import conf, get_if_list, get_if_hwaddr
+from scapy.all import get_if_list, get_if_hwaddr
 import subprocess
 import platform
 import sys
 # Archivos del proyecto
 from interface import Interface
 from capture import Capture
+from analisis import Analisis
 
 # Comprobar si existe en el dispositivo "npcap" (preferentemente) no "wincap".
 # por cuestiones de funcionamiento de "scapy".
@@ -15,11 +16,8 @@ def promisc_mode(interfaz):
 
 if __name__ == '__main__':
     interfaceWifi, interfaceEthernet, interfaceLoopback = Interface.get_interfaces()
-    print(f'Wi-Fi {interfaceWifi}\n', f'Ethernet {interfaceEthernet}\n', f'Loopback {interfaceLoopback}\n')
+    #print(f'Wi-Fi {interfaceWifi}\n', f'Ethernet {interfaceEthernet}\n', f'Loopback {interfaceLoopback}\n')
     
-    # Ejecución preliminar del programa.
-
-  
     # AGREGADO PARA LA FASE DE CAPTURA
     interfaz_elegida = None
     if interfaceWifi:
@@ -31,9 +29,9 @@ if __name__ == '__main__':
         
     if interfaz_elegida:
         # Se llama al módulo de captura
-        datos_crudos = Capture.iniciar_captura(interfaz_elegida)
-        
-        if datos_crudos:
+        paquete = Capture.iniciar_captura(interfaz_elegida)
+        if paquete:
+            package_analisis = Analisis.analice_packet(paquete)
             print("\n[*] Captura estática completada. Datos listos para la fase de análisis.")
     else:
         print("\n[!] No se encontró ninguna interfaz activa para iniciar la captura.")

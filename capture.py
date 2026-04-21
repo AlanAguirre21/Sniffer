@@ -17,14 +17,14 @@ class Capture:
             
             if paquetes:
                 paquete = paquetes[0]
-                
+                #print(paquete.show(), '\n')
                 # Convertimos el paquete de Scapy a bytes crudos.
                 datos_crudos = bytes(paquete)
                 
                 print("[+] ¡Paquete capturado exitosamente!")
                 print(f"[*] Tamaño de la trama: {len(datos_crudos)} bytes.")
                 
-                return datos_crudos
+                return paquete
             else:
                 print("[-] No se interceptó ningún paquete.")
                 return None

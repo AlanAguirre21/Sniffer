@@ -2,8 +2,15 @@ from scapy.all import get_if_list, get_if_addr, get_if_hwaddr
 import subprocess
 
 class Interface:
+    
+    interfaceEthernet = []
+    interfaceWifi = []
+    interfaceLoopback = []
+    discarded = []
+    
     # En windows
-    def get_interfaces():
+    @classmethod
+    def get_interfaces(cls):
         # Obtener nombres de Windows
         resultado = subprocess.run(
             ['powershell', '-Command', 'Get-NetAdapter | Select-Object Name, MacAddress'],
@@ -24,11 +31,6 @@ class Interface:
                     mapeo_mac_nombre[mac] = nombre 
 
         # Obtener UUIDs
-        interfaceEthernet = []
-        interfaceWifi = []
-        interfaceLoopback = []
-        discarded = []
-        
         uuids = get_if_list()
         for uuid in uuids:
             try:
@@ -42,21 +44,21 @@ class Interface:
 
                 # Interfaces descartadas
                 if ip == '0.0.0.0':
-                    discarded.append(uuid)
-                    print("Interfaz inactiva o virtual. No útil")
+                    cls.discarded.append(uuid)
+                    #print("Interfaz inactiva o virtual. No útil")
                     
                 # Clasificación útil
                 elif nombre.lower() == "ethernet":
-                    interfaceEthernet.append(uuid)
+                    cls.interfaceEthernet.append(uuid)
                 elif nombre.lower() in ["wi-fi", "wireless"]:
-                    interfaceWifi.append(uuid)
+                    cls.interfaceWifi.append(uuid)
                 elif ip and ip.startswith("127"):
-                    interfaceLoopback.append(uuid)
+                    cls.interfaceLoopback.append(uuid)
 
             except Exception as e:
                 print(f"Error: {e}")
                 
-        #print(f'Wi-Fi {interfaceWifi}\n', f'Ethernet {interfaceEthernet}\n', f'Loopback {interfaceLoopback}\n', f'Discarded {discarded}')
-        return interfaceWifi, interfaceEthernet, interfaceLoopback
+        #print(f'Wi-Fi {cls.interfaceWifi}\n', f'Ethernet {cls.interfaceEthernet}\n', f'Loopback {cls.interfaceLoopback}\n', f'Discarded {cls.discarded}')
+        return cls.interfaceWifi, cls.interfaceEthernet, cls.interfaceLoopback
  
-#Interface.get_interfaces()
+Interface.get_interfaces()
