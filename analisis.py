@@ -12,12 +12,12 @@ class Analisis:
                 #print(type(layer.name))
                 #print(layer.name)
                 print('-'*50)
-                print(f" Capa{i}: {layer.name}")
+                print(f" Capa {i+1}: {layer.name}")
                 print('-'*50)
                 
                 for field, value in layer.fields.items():
                     if isinstance(value, bytes):
-                        print(f"Campo: {field}: Valor: {value.hex()}")
+                        print(f"- {field}: {value.hex()}")
                     else:
-                        print(f"Campo: {field}: Valor: {value}")
+                        print(f"- {field}: {value}")
                 
