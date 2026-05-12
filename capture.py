@@ -1,60 +1,123 @@
-from scapy.all import sniff
-import logging
+import threading
+from datetime import datetime
+from scapy.all import sniff, IP, TCP, UDP, ICMP, ARP, Ether, DNS
 
-logging.basicConfig(level=logging.INFO) #Cambiar a WARNING para forma silenciosa
-logger = logging.getLogger(__name__)
 
 class Capture:
-    def __init__(self):
-        self.sniffing_time = 5
-        self.paquetes = []
-        self.datos_crudos = []
-    
-    def set_time(self):
-        try:
-            print("""[*] Seleccione el tiempo en el que se capturarán los paquetes en la red:
-                a) 5
-                b) 10
-                c) 20
-                d) 30""")
-            value = input("Ingrese la opción que desea utilizar:").strip().lower()
-            if value not in ["a", "b", "c", "d"]:
-                print("\n[!] Opción no válida. Por favor, elija entre 'a', 'b', 'c' o 'd'.")
-                self.set_time()
-            elif value == "a":
-                self.sniffing_time = 5
-            elif value == "b":
-                self.sniffing_time = 10
-            elif value == "c":
-                self.sniffing_time = 20
-            elif value == "d":
-                self.sniffing_time = 30
-        except Exception as e:
-            logger.error(f"Error al establecer el tiempo de captura: {e}")
 
-    def iniciar_captura(self, interfaz):
+   
+    # PARTE 1 ─ Captura estática
+    @staticmethod
+    def iniciar_captura(interfaz):
         """
-        Inicia la escucha en la interfaz seleccionada y captura de forma estática (1 paquete).
-        Retorna los datos en formato de bytes crudos (raw).
+        Inicia la escucha en la interfaz seleccionada y captura de forma
+        estática (1 paquete IPv4). Retorna el objeto Scapy del paquete capturado.
         """
         print(f"\n[*] Iniciando captura en la interfaz: {interfaz}")
+        print("[*] Esperando 1 paquete IPv4 estático en la red...")
+
         try:
-            self.set_time()
-            print(f"[*] Capturando durante {self.sniffing_time} segundos...")
-            # iface recibe el UUID de la interfaz seleccionada
-            self.paquetes = sniff(iface=interfaz, timeout=self.sniffing_time)
-            
-            if self.paquetes:
-                for pkt in self.paquetes:
-                    # Convertimos el paquete de Scapy a bytes crudos.
-                    self.datos_crudos.append(bytes(pkt))
-                
-                print("[+] ¡Paquetes capturado exitosamente!")
-                print(f"[*] Cantidad de tramas/paquetes: {len(self.paquetes)}.")
+            paquetes = sniff(iface=interfaz, filter="ip", count=1)
+
+            if paquetes:
+                paquete = paquetes[0]
+                datos_crudos = bytes(paquete)
+
+                print("[+] ¡Paquete capturado exitosamente!")
+                print(f"[*] Tamaño de la trama: {len(datos_crudos)} bytes.")
+
+                return paquete
             else:
                 print("[-] No se interceptó ningún paquete.")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Error crítico al intentar capturar en la interfaz: {e}")
             return None
+
+    # PARTE 2 ─ Captura dinámica
+    @staticmethod
+    def captura_dinamica(interfaz):
+        """
+        Captura paquetes IPv4 de forma dinámica mostrando el flujo en tiempo real.
+        Presionar ENTER detiene la captura y retorna la lista de paquetes.
+        """
+        paquetes   = []
+        stop_event = threading.Event()
+        lock       = threading.Lock()
+        contador   = [0]
+
+        print(f"\n[*] Iniciando captura dinámica en la interfaz: {interfaz}")
+        print("[*] Solo paquetes IPv4. Presione ENTER para detener la captura...\n")
+
+        col = f"{'N°':<5} {'Hora':<14} {'Protocolo':<10} {'Origen':<22} {'Destino':<22} {'Long.'}"
+        print(col)
+        print("─" * len(col))
+
+        def _obtener_protocolo(paquete):
+            if paquete.haslayer(DNS):
+                return "DNS"
+            if paquete.haslayer(TCP):
+                return "TCP"
+            if paquete.haslayer(UDP):
+                return "UDP"
+            if paquete.haslayer(ICMP):
+                return "ICMP"
+            if paquete.haslayer(ARP):
+                return "ARP"
+            if paquete.haslayer(IP):
+                return "IP"
+            if paquete.haslayer(Ether):
+                return "Ethernet"
+            return "OTRO"
+
+        def _obtener_endpoints(paquete):
+            if paquete.haslayer(IP):
+                return paquete[IP].src, paquete[IP].dst
+            if paquete.haslayer(ARP):
+                return paquete[ARP].psrc, paquete[ARP].pdst
+            if paquete.haslayer(Ether):
+                return paquete[Ether].src, paquete[Ether].dst
+            return "N/A", "N/A"
+
+        def _callback(paquete):
+            with lock:
+                contador[0] += 1
+                idx = contador[0]
+                paquetes.append(paquete)
+
+            hora     = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            proto    = _obtener_protocolo(paquete)
+            src, dst = _obtener_endpoints(paquete)
+            longitud = len(bytes(paquete))
+
+            src = (src[:19] + "…") if len(src) > 20 else src
+            dst = (dst[:19] + "…") if len(dst) > 20 else dst
+
+            print(f"{idx:<5} {hora:<14} {proto:<10} {src:<22} {dst:<22} {longitud}")
+
+        def _stop_filter(paquete):
+            return stop_event.is_set()
+
+        hilo = threading.Thread(
+            target=lambda: sniff(
+                iface=interfaz,
+                filter="ip",
+                prn=_callback,
+                stop_filter=_stop_filter
+            ),
+            daemon=True
+        )
+        hilo.start()
+
+        try:
+            input()
+        except KeyboardInterrupt:
+            pass
+
+        stop_event.set()
+        hilo.join(timeout=3)
+
+        total = len(paquetes)
+        print(f"\n[+] Captura detenida. Total de paquetes capturados: {total}")
+        return paquetes
