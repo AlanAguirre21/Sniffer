@@ -1,8 +1,6 @@
 from scapy.all import IP, TCP, UDP, ICMP, ARP, Ether, DNS, Raw
 from datetime import datetime
 
-
-
 # Protocolos Ethertype
 ETHERTYPE_TABLA = {
     0x0800: "IPv4 - Internet Protocol version 4",

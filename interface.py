@@ -102,6 +102,7 @@ class Interface:
             if not uuids:
                 logger.warning("No se encontraron interfaces de red.")
                 return []
+            
             interfaces = []
             for i in mapping:
                 if mapping[i]['Tipo'] == interface_type and mapping[i]['Activa']:
@@ -143,52 +144,3 @@ class Interface:
             "loopback": self.interfacesLoopback
         }
         
-    '''MAPING CON POWERSHELL
-    def mac_mapping(self):
-        mapping = {}
-        # Nombres de las interfaces
-        try:
-            resultado = subprocess.run(
-                [
-                'powershell',
-                '-Command',
-                'Get-NetAdapter | Select-Object Name, MacAddress | ConvertTo-Json'
-                ],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if resultado.returncode != 0:
-                print(f"Error al ejecutar PowerShell: {resultado.stderr}")
-                return mapping
-            
-            if not resultado.stout.strip():
-                print("No se obtuvo salida de PowerShell.")
-                return mapping
-                
-            data = json.loads(resultado.stdout)
-            
-            if isinstance(data, dict):
-                data = [data]
-            
-            if not data:
-                print("No se encontraron interfaces")
-                return mapping
-            
-            for item in data:
-                mac = item.get("MacAddress")
-                name = item.get("Name")
-                if mac and name:
-                    mapping[mac] = name
-            
-        except subprocess.TimeoutExpired:
-            print("Error: El comando PowerShell tardó demasiado en ejecutarse.")
-        except FileNotFoundError:
-            print("Error: PowerShell no se encontró. Asegúrate de estar ejecutando este script en Windows.")
-        except json.JSONDecodeError:
-            print("Error: No se pudo decodificar la salida de PowerShell. Asegúrate de que el comando se ejecute correctamente.")
-        except Exception as e:
-            print(f"Error en mapeado de interfaces: {e}")
-            
-        return mapping
-    '''
