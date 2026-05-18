@@ -1,11 +1,32 @@
 import threading
 from datetime import datetime
 import logging
-from scapy.all import Ether, IP, IPv6, ARP, GRE, IPIP, sniff
+from scapy.all import Ether, IP, IPv6, ARP, sniff
+from protocol_map import CAPTURE_TYPE_LENGTH
 
 logging.basicConfig(level=logging.INFO) #Cambiar a WARNING para forma silenciosa
 logger = logging.getLogger(__name__)
 
+def _obtener_layer_3(paquete):
+    if not paquete.haslayer(Ether):
+        return "N/A"
+    frame_type = paquete[Ether].type
+    if frame_type <= 0x05DC:
+        return "LLC"
+    else:
+        return CAPTURE_TYPE_LENGTH.get(frame_type, "DESCONOCIDO")
+
+def _obtener_endpoints(paquete):
+    if paquete.haslayer(IP):
+        return paquete[IP].src, paquete[IP].dst
+    if paquete.haslayer(IPv6):
+        return paquete[IPv6].src, paquete[IPv6].dst
+    if paquete.haslayer(ARP):
+        return paquete[ARP].psrc, paquete[ARP].pdst
+    if paquete.haslayer(Ether):
+        return paquete[Ether].src, paquete[Ether].dst
+    return "N/A", "N/A"
+        
 class Capture:
 
     # PARTE 1 ─ Captura estática
@@ -52,42 +73,9 @@ class Capture:
         print(f"\n[*] Iniciando captura dinámica en la interfaz: {interfaz}")
         print("[*] Solo paquetes IPv4. Presione ENTER para detener la captura...\n")
 
-        col = f"{'N°':<5} {'Hora':<14} {'Datagrama':<12} {'Origen':<22} {'Destino':<22} {'Long.'}"
+        col = f"{'N°':<5} {'Hora':<14} {'Protocolo Red':<15} {'Origen':<22} {'Destino':<22} {'Long.'}"
         print(col)
         print("─" * len(col))
-
-        def _obtener_datagram(paquete):
-            if not paquete.haslayer(Ether):
-                return "N/A"
-            
-            layer = paquete[Ether].payload
-            datagrams = ["IP", "IPv6", "ARP", #             # Básico
-                         "ICMP", "IGMP", "ICMPV6",          # Control
-                         "GRE", "ESP", "AH", "IPIP",        # Tunneling/Security
-                         "DCCP", "SCTP", "HIP", "RSVP"]     # Otros L3
-            
-            while layer:
-                if layer.name in datagrams:
-                    return layer.name
-                if layer.name == "Raw":
-                    return "RAW"
-                layer = layer.payload
-            return "DESCONOCIDO"
-
-        def _obtener_endpoints(paquete):
-            if paquete.haslayer(IP):
-                return paquete[IP].src, paquete[IP].dst
-            if paquete.haslayer(IPv6):
-                return paquete[IPv6].src, paquete[IPv6].dst
-            if paquete.haslayer(ARP):
-                return paquete[ARP].psrc, paquete[ARP].pdst
-            if paquete.haslayer(GRE):
-                return paquete[GRE].src, paquete[GRE].dst
-            if paquete.haslayer(IPIP):
-                return paquete[IPIP].src, paquete[IPIP].dst
-            if paquete.haslayer(Ether):
-                return paquete[Ether].src, paquete[Ether].dst
-            return "N/A", "N/A"
 
         def _callback(paquete):
             with lock:
@@ -96,14 +84,14 @@ class Capture:
                 paquetes.append(paquete)
 
             hora     = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-            datagram = _obtener_datagram(paquete)
+            layer_3 = _obtener_layer_3(paquete)
             src, dst = _obtener_endpoints(paquete)
             longitud = len(bytes(paquete))
 
             src = (src[:19] + "…") if len(src) > 20 else src
             dst = (dst[:19] + "…") if len(dst) > 20 else dst
 
-            print(f"{idx:<5} {hora:<14} {datagram:<12} {src:<22} {dst:<22} {longitud}")
+            print(f"{idx:<5} {hora:<14} {layer_3:<15} {src:<22} {dst:<22} {longitud}")
 
         def _stop_filter(paquete):
             return stop_event.is_set()
