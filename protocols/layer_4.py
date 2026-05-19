@@ -1,38 +1,274 @@
 from protocol_map import *
+from analisis import obtener_servicio_puerto
+
 # PROTOCOLO TCP
-def _analizar_tcp(capa):
+def analizar_tcp(capa):
+    """
+    Datagrama TCP - Transmission Control Protocol
+    Protocolo 6 - Transporte confiable orientado a conexión (Capa 4)
+    Campos: SOURCE_PORT DEST_PORT SEQUENCE_NUMBER ACKNOWLEDGMENT_NUMBER
+            DATA_OFFSET RESERVED FLAGS WINDOW_SIZE CHECKSUM URGENT_POINTER OPTIONS DATA
+    """
     SEP = "  " + "." * 58
-    print(f"  [SPT]  Puerto Origen   : {capa.sport}")
-    print(f"  [DPT]  Puerto Destino  : {capa.dport}")
+
+    print(f"  [INFO]   TCP - Transmission Control Protocol")
+    print(f"            Protocolo de transporte confiable (Capa 4)")
+    print(f"            Orientado a conexión y orientado a flujo")
+    print(f"            Garantiza entrega en orden sin duplicados")
     print(SEP)
-    print(f"  [SEQ]  Num. Secuencia  : {capa.seq}")
-    print(f"  [ACK]  Num. ACK        : {capa.ack}")
+
+    # SOURCE PORT
+    sport = capa.sport
+    sport_service = obtener_servicio_puerto(sport)
+    print(f"  [SPORT]  Puerto Origen   : {sport}  (16 bits)")
+    print(f"            Servicio      : {sport_service}")
     print(SEP)
-    flags_str = str(capa.flags)
-    print(f"  [FLG]  Flags TCP       : {flags_str}")
-    print(f"           SYN:{int('S' in flags_str)}  ACK:{int('A' in flags_str)}  "
-            f"FIN:{int('F' in flags_str)}  RST:{int('R' in flags_str)}  "
-            f"PSH:{int('P' in flags_str)}  URG:{int('U' in flags_str)}")
+
+    # DESTINATION PORT
+    dport = capa.dport
+    dport_service = obtener_servicio_puerto(dport)
+    print(f"  [DPORT]  Puerto Destino  : {dport}  (16 bits)")
+    print(f"            Servicio      : {dport_service}")
     print(SEP)
-    print(f"  [WIN]  Ventana         : {capa.window} Bytes")
-    print(f"  [CHK]  Checksum        : 0x{capa.chksum:04X}")
+
+    # SEQUENCE NUMBER
+    seq = capa.seq
+    print(f"  [SEQ]    Núm. Secuencia : {seq}  (0x{seq:08X})  (32 bits)")
+    print(f"            Número del primer byte de datos en este segmento")
+    print(f"            Permite ordenar segmentos correctamente")
+    print(SEP)
+
+    # ACKNOWLEDGMENT NUMBER
+    ack = capa.ack
+    print(f"  [ACK]    Número Reconoc. : {ack}  (0x{ack:08X})  (32 bits)")
+    print(f"            Próximo byte esperado del remitente")
+    print(f"            Valido solo si flag ACK está activo")
+    print(SEP)
+
+    # DATA OFFSET
+    data_offset = capa.dataofs
+    header_bytes = data_offset * 4
+    print(f"  [DOFF]   Despl. de Datos : {data_offset}  (4 bits)")
+    print(f"            Longitud del encabezado TCP")
+    print(f"            Tamaño real: {data_offset} x 4 = {header_bytes} Bytes")
+    print(f"            Mínimo: 20 Bytes (sin opciones)")
+    print(SEP)
+
+    # RESERVED
+    print(f"  [RSVD]   Reservado       : (3 bits)")
+    print(f"            Debe ser cero")
+    print(SEP)
+
+    # FLAGS
+    flags_str = ""
+    flags_list = []
+    
+    fin = capa.flags & 0x01
+    syn = (capa.flags >> 1) & 0x01
+    rst = (capa.flags >> 2) & 0x01
+    psh = (capa.flags >> 3) & 0x01
+    ack_flag = (capa.flags >> 4) & 0x01
+    urg = (capa.flags >> 5) & 0x01
+    ece = (capa.flags >> 6) & 0x01
+    cwr = (capa.flags >> 7) & 0x01
+    ns = (capa.flags >> 8) & 0x01
+    
+    if fin:
+        flags_list.append("FIN")
+    if syn:
+        flags_list.append("SYN")
+    if rst:
+        flags_list.append("RST")
+    if psh:
+        flags_list.append("PSH")
+    if ack_flag:
+        flags_list.append("ACK")
+    if urg:
+        flags_list.append("URG")
+    if ece:
+        flags_list.append("ECE")
+    if cwr:
+        flags_list.append("CWR")
+    if ns:
+        flags_list.append("NS")
+    
+    flags_str = ", ".join(flags_list) if flags_list else "None"
+    
+    print(f"  [FLAGS]  Banderas        : 0x{capa.flags:03X}  ({capa.flags:09b}b)  (9 bits)")
+    print(f"            Banderas activas: {flags_str}")
+    print(f"            FIN (Finalizar)  : {fin}")
+    print(f"            SYN (Sincronizar): {syn}")
+    print(f"            RST (Reset)      : {rst}")
+    print(f"            PSH (Push)       : {psh}")
+    print(f"            ACK (Reconocim.) : {ack_flag}")
+    print(f"            URG (Urgente)    : {urg}")
+    print(f"            ECE (ECN Echo)   : {ece}")
+    print(f"            CWR (Congestion) : {cwr}")
+    print(f"            NS (Nonce Sum)   : {ns}")
+    print(SEP)
+
+    # WINDOW SIZE
+    window = capa.window
+    print(f"  [WIND]   Tamaño Ventana  : {window} Bytes  (16 bits)")
+    print(f"            Bytes que el remitente está dispuesto a recibir")
+    print(f"            Control de flujo (flow control)")
+    print(SEP)
+
+    # CHECKSUM
+    chk = capa.chksum
+    print(f"  [CHKS]   Suma verific.   : 0x{chk:04X}  (16 bits)")
+    print(f"            CRC del encabezado TCP + datos")
+    print(f"            Incluye pseudo-encabezado IP")
+    print(SEP)
+
+    # URGENT POINTER
+    if urg:
+        urgent = capa.urgptr
+        print(f"  [URG]    Puntero Urgente : {urgent}  (16 bits)")
+        print(f"            Offset del dato urgente")
+        print(f"            Valido solo si flag URG está activo")
+        print(SEP)
+
+    # OPTIONS
+    if data_offset > 5 and hasattr(capa, 'options'):
+        opt_bytes = header_bytes - 20
+        print(f"  [OPT]    Opciones        : {opt_bytes} Bytes")
+        print(f"            Opciones TCP (MSS, Window Scale, SACK, Timestamps, etc.)")
+        
+        # Intentar mostrar opciones específicas
+        options = capa.options if capa.options else []
+        if options:
+            for opt in options:
+                if isinstance(opt, tuple):
+                    opt_name, opt_val = opt
+                    print(f"              • {opt_name}: {opt_val}")
+        print(SEP)
+
+    # PAYLOAD DATA
+    if capa.payload and len(capa.payload) > 0:
+        payload_len = len(capa.payload)
+        print(f"  [DATA]   Datos           : {payload_len} Bytes")
+        print(f"            Datos de la aplicación (HTTP, SSH, etc.)")
+        print(SEP)
+
+    # ANÁLISIS DE ESTADO DE CONEXIÓN
+    print(f"  [STATE]  Estado de Conexión (basado en flags):")
+    if syn and not ack_flag:
+        print(f"            → SYN: Inicio de conexión (cliente → servidor)")
+    elif syn and ack_flag:
+        print(f"            → SYN-ACK: Aceptación de conexión (servidor → cliente)")
+    elif ack_flag and not syn and not fin:
+        print(f"            → ACK: Reconocimiento/datos")
+    elif fin and ack_flag:
+        print(f"            → FIN-ACK: Cierre de conexión")
+    elif rst:
+        print(f"            → RST: Reset/cierre forzado de conexión")
+    elif psh and ack_flag:
+        print(f"            → PSH-ACK: Datos con push (envío inmediato)")
+    print(SEP)
+
+    # INFORMACIÓN GENERAL
+    print(f"  [CARACT] Características de TCP:")
+    print(f"            • Confiable: garantiza entrega")
+    print(f"            • Ordenado: mantiene orden de datos")
+    print(f"            • Sin duplicados: detecta y descarta duplicados")
+    print(f"            • Control de flujo: window size")
+    print(f"            • Control de congestión: algoritmos (Reno, CUBIC, etc.)")
+    print(f"            • Orientado a conexión: 3-way handshake")
+    print(SEP)
+
+    print(f"  [3WAY]   3-Way Handshake (establecimiento de conexión):")
+    print(f"            1. Cliente envía SYN (seq=X)")
+    print(f"            2. Servidor responde SYN-ACK (seq=Y, ack=X+1)")
+    print(f"            3. Cliente envía ACK (seq=X+1, ack=Y+1)")
+    print(SEP)
+
+    print(f"  [CLOSE]  Cierre de conexión (4-Way Handshake):")
+    print(f"            1. Origen envía FIN")
+    print(f"            2. Destino responde ACK")
+    print(f"            3. Destino envía FIN")
+    print(f"            4. Origen responde ACK")
+    print(SEP)
+
+    print(f"  [CASOS]  Casos de uso:")
+    print(f"            • HTTP/HTTPS (web)")
+    print(f"            • SSH (terminal remota)")
+    print(f"            • SMTP/POP3/IMAP (correo)")
+    print(f"            • FTP (transferencia de archivos)")
+    print(f"            • Telnet (terminal insegura)")
+    print(f"            • Cualquier aplicación que necesite confiabilidad")
+    print(SEP)
+
+    print(f"  [PERF]   Consideraciones de rendimiento:")
+    print(f"            • Latencia más alta que UDP (3-way handshake)")
+    print(f"            • Overhead de control más alto")
+    print(f"            • Mejor para datos críticos que deben llegar")
+    print(f"            • Retransmisión automática de datos perdidos")
+    print(SEP)
 
 # --------------------------------------------------------------------------
 
 # PROTOCOLO UDP
-def _analizar_udp(capa):
+def analizar_udp(capa):
+    """
+    Datagrama UDP - User Datagram Protocol
+    Protocolo 17 - Transporte sin conexión (Capa 4)
+    Campos: SOURCE_PORT DEST_PORT LENGTH CHECKSUM DATA
+    """
     SEP = "  " + "." * 58
-    print(f"  [SPT]  Puerto Origen   : {capa.sport}")
-    print(f"  [DPT]  Puerto Destino  : {capa.dport}")
-    print(SEP)
-    print(f"  [LEN]  Longitud        : {capa.len} Bytes  (encabezado UDP + datos)")
-    print(f"  [CHK]  Checksum        : 0x{capa.chksum:04X}")
-    
 
+    print(f"  [INFO]   UDP - User Datagram Protocol")
+    print(f"            Protocolo de transporte sin conexión (Capa 4)")
+    print(f"            Protocolo 17 dentro de IP")
+    print(SEP)
+
+    # SOURCE PORT
+    sport = capa.sport
+    print(f"  [SPORT]  Puerto Origen   : {sport}  (16 bits)")
+    print(f"            Puerto fuente del datagrama UDP")
+    print(SEP)
+
+    # DESTINATION PORT
+    dport = capa.dport
+    print(f"  [DPORT]  Puerto Destino  : {dport}  (16 bits)")
+    print(f"            Puerto destino del datagrama UDP")
+    print(SEP)
+
+    # LENGTH
+    length = capa.len
+    payload_len = length - 8
+    print(f"  [LEN]    Longitud Total  : {length} Bytes  (16 bits)")
+    print(f"            Longitud = Encabezado (8) + Datos ({payload_len})")
+    print(f"            Tamaño completo del datagrama UDP")
+    print(SEP)
+
+    # CHECKSUM
+    chk = capa.chksum
+    if chk == 0:
+        chk_status = "DESHABILITADO (0x0000)"
+    else:
+        chk_status = f"0x{chk:04X}"
+    print(f"  [CHKS]   Suma verific.   : {chk_status}  (16 bits)")
+    print(f"            CRC del encabezado UDP + datos")
+    print(f"            Si es 0, el checksum está deshabilitado")
+    print(f"            Incluye pseudo-encabezado IP para validación")
+    print(SEP)
+
+    # PAYLOAD DATA
+    if capa.payload and len(capa.payload) > 0:
+        payload_len = len(capa.payload)
+        print(f"  [DATA]   Datos           : {payload_len} Bytes")
+        print(f"            Carga útil (payload) del datagrama UDP")
+        print(SEP)
+    else:
+        print(f"  [DATA]   Datos           : 0 Bytes")
+        print(f"            Datagrama vacío (solo encabezado)")
+        print(SEP)
+    
 # --------------------------------------------------------------------------
 
 # PROTOCOLO DCCP
-def _analizar_dccp(capa):
+def analizar_dccp(capa):
     """
     Datagrama DCCP - Datagram Congestion Control Protocol
     Protocolo 33 - Transporte confiable con baja latencia
@@ -130,7 +366,7 @@ def _analizar_dccp(capa):
     print(f"            Proporciona alternativa equilibrada entre UDP y TCP")
     
 # ----------------- SCTP -----------------------
-def _analizar_sctp(capa):
+def analizar_sctp(capa):
     """
     Datagrama SCTP - Stream Control Transmission Protocol
     Protocolo 132 - Transporte confiable multistream

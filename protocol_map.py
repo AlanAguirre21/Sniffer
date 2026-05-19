@@ -439,3 +439,322 @@ SCTP_CHUNK_FLAGS_TABLA = {
     0x02: "End of message",
     0x03: "Complete message",
 }
+
+# ----------- ICMP ---------------
+ICMP_TYPE_TABLA = {
+    0: "Echo Reply (respuesta a ping)",
+    1: "Reserved",
+    2: "Reserved",
+    3: "Destination Unreachable",
+    4: "Source Quench",
+    5: "Redirect",
+    6: "Alternate Host Address",
+    7: "Reserved",
+    8: "Echo Request (ping)",
+    9: "Router Advertisement",
+    10: "Router Solicitation",
+    11: "Time Exceeded",
+    12: "Parameter Problem",
+    13: "Timestamp Request",
+    14: "Timestamp Reply",
+    15: "Information Request",
+    16: "Information Reply",
+    17: "Address Mask Request",
+    18: "Address Mask Reply",
+    30: "Traceroute",
+    31: "Datagram Conversion Error",
+    32: "Mobile Host Redirect",
+    33: "IPv6 Where-Are-You",
+    34: "IPv6 I-Am-Here",
+    35: "Mobile Registration Request",
+    36: "Mobile Registration Reply",
+    37: "Domain Name Request",
+    38: "Domain Name Reply",
+    39: "SKIP",
+    40: "Photuris",
+    42: "Extended Echo Request",
+    43: "Extended Echo Reply",
+}
+
+ICMP_CODE_TABLA = {
+    # Destination Unreachable (Type 3)
+    (3, 0): "Network unreachable",
+    (3, 1): "Host unreachable",
+    (3, 2): "Protocol unreachable",
+    (3, 3): "Port unreachable",
+    (3, 4): "Fragmentation needed and DF flag set",
+    (3, 5): "Source route failed",
+    (3, 6): "Destination network unknown",
+    (3, 7): "Destination host unknown",
+    (3, 8): "Source host isolated",
+    (3, 9): "Communication with destination network administratively prohibited",
+    (3, 10): "Communication with destination host administratively prohibited",
+    (3, 11): "Network unreachable for type of service",
+    (3, 12): "Host unreachable for type of service",
+    (3, 13): "Communication administratively prohibited",
+    
+    # Redirect (Type 5)
+    (5, 0): "Redirect datagram for the network",
+    (5, 1): "Redirect datagram for the host",
+    (5, 2): "Redirect datagram for the type of service and network",
+    (5, 3): "Redirect datagram for the type of service and host",
+    
+    # Time Exceeded (Type 11)
+    (11, 0): "TTL exceeded in transit",
+    (11, 1): "Fragment reassembly time exceeded",
+    
+    # Parameter Problem (Type 12)
+    (12, 0): "Pointer indicates the error",
+    (12, 1): "Missing a required option",
+    (12, 2): "Bad length",
+    
+    # Echo Request/Reply (Type 8/0)
+    (8, 0): "Echo request",
+    (0, 0): "Echo reply",
+}
+
+# -------------- RSVP --------------
+RSVP_MESSAGE_TYPE_TABLA = {
+    1: "Path",
+    2: "Resv (Reservation)",
+    3: "PathErr (Path Error)",
+    4: "ResvErr (Reservation Error)",
+    5: "PathTear",
+    6: "ResvTear",
+    7: "ResvConf (Reservation Confirmation)",
+    8: "Bundle",
+    9: "Ack",
+    10: "SRefresh",
+    11: "Hello",
+    12: "Notify",
+}
+
+RSVP_SERVICE_TYPE_TABLA = {
+    0: "Default (Best Effort)",
+    1: "Controlled Load",
+    2: "Guaranteed Service",
+    4: "Qualitative",
+    5: "null",
+    128: "Compression Hint",
+}
+
+RSVP_FLOWSPEC_FLAGS_TABLA = {
+    0x00: "Standard",
+    0x01: "Reverse Direction",
+}
+
+# Mapeo de códigos de error RSVP
+RSVP_ERROR_CODE_TABLA = {
+    1: "Admission Control Failure",
+    2: "Policy Control Failure",
+    3: "No Uncommitted Reservation Style Option",
+    4: "Unsupported Reservation Style",
+    5: "Unexpected Reservation Style",
+    6: "Unsupported Flowspec",
+    7: "Unsupported Adspec",
+    8: "Unsupported Object",
+    9: "Traffic Control Error",
+    10: "Traffic Control System Error",
+    11: "RSVP System Error",
+    12: "RSVP Routing Error",
+    13: "Unknown Objects Class",
+    14: "Unknown Objects C-Type",
+    15: "Traffic Control Error / Service Preempted",
+    16: "Bad Flowspec Value",
+    17: "Pre-empted",
+    18: "Expired Aggregate",
+    19: "Expired Flow",
+    20: "Expired Tunnel",
+    21: "Expired Sub Flow",
+    22: "Bad Explicit Route Objects",
+    23: "Bad Strict Node",
+    24: "Bad Loose Node",
+    25: "Bad Loose Node Format",
+    26: "Bad Strict Node Format",
+    27: "Bad Route",
+    28: "Bad Xro",
+    29: "Bad Xro Subobject",
+    30: "Unacceptable Network Slice Label",
+    31: "Unsupported L3PID",
+}
+
+# -------------- HIP --------------
+HIP_PACKET_TYPE_TABLA = {
+    0: "Reserved",
+    1: "I1 (Initiator HIP Packet)",
+    2: "R1 (Responder HIP Packet)",
+    3: "I2 (Initiator HIP Packet 2)",
+    4: "R2 (Responder HIP Packet 2)",
+    5: "UPDATE",
+    6: "NOTIFY",
+    7: "CLOSE",
+    8: "CLOSE-ACK",
+    9: "NOTIFY-ACK",
+    10: "MOBILITY_CHANGE",
+    11: "HEARTBEAT",
+}
+
+HIP_PARAMETER_TYPE_TABLA = {
+    1: "Host Association Token",
+    2: "HMAC",
+    3: "Signature (ECDSA, RSA, DSA)",
+    4: "Public Key (RSA, ECDSA, DSA)",
+    5: "Encrypted Key Material",
+    6: "SEQ",
+    7: "Encrypted",
+    8: "Diffie-Hellman",
+    9: "ECHO_REQUEST",
+    10: "ECHO_RESPONSE",
+    11: "HMAC_2",
+    12: "PUZZLE",
+    13: "SOLUTION",
+    14: "AGENT_INFO",
+    15: "ACK",
+    16: "ENCRYPTED",
+    17: "HOST_ID",
+    18: "LOCATOR",
+    19: "TRANSPORT_FORMAT_LIST",
+    20: "ESP_TRANSFORM",
+    21: "FROM",
+    22: "RELAY_FROM",
+    23: "RELAY_TO",
+    24: "ROUTE_VIA",
+    25: "NONCE",
+    26: "INTERACTION",
+    27: "LIFETIME",
+    28: "CERT",
+    29: "NOTIFICATION",
+    30: "ESP_INFO",
+    31: "HIP_SIGNATURE_ALGORITHMS",
+    32: "HIP_MAC_ALGORITHMS",
+}
+
+HIP_CONTROL_FLAGS_TABLA = {
+    "ACK_REQUIRED": 0x8000,  # bit 0
+    "ACK": 0x4000,           # bit 1
+    "FROM": 0x2000,          # bit 2
+    "RELAY": 0x1000,         # bit 3
+}
+
+HIP_NOTIFY_MESSAGE_TYPE_TABLA = {
+    1: "UNSUPPORTED_CRITICAL_PARAMETER_TYPE",
+    2: "INVALID_SYNTAX",
+    4: "UNSUPPORTED_HIP_VERSION",
+    7: "INVALID_HIT_SYNTAX",
+    9: "INVALID_HOST_ID_TAIL",
+    11: "UNSUPPORTED_NAT_TRAVERSAL_MODE",
+    14: "AUTHENTICATION_FAILED",
+    20: "UNSUPPORTED_ECDSA_CURVE",
+    40: "NO_SUITABLE_SPI_LOCATORS",
+    42: "INVALID_COOKIE",
+    44: "NO_DH_PROPOSAL_CHOSEN",
+    46: "INVALID_DH_CHOSEN",
+    48: "NO_HIP_PROPOSAL_CHOSEN",
+    50: "INVALID_HIP_TRANSFORM_CHOSEN",
+    52: "BLOCKS_NON_ESP_CAPABLE",
+    54: "UNSUPPORTED_CRITICAL_PARAMETER_TYPE",
+    56: "NO_SUITABLE_ESP_SPI",
+    58: "NO_SUITABLE_SPI_LOCATORS",
+    60: "COOKIE_REQUIRED",
+    62: "BAD_CERTIFICATE",
+    64: "UNSUPPORTED_CERTIFICATE",
+    66: "CERTIFICATE_EXPIRED",
+    68: "UNSUPPORTED_NAT_TRAVERSAL_MODE",
+    70: "INVALID_NAT_TRAVERSAL_MODE_ID",
+}
+
+# --------------- TCP ---------------
+puerto_servicio = {
+    20: "FTP-DATA",
+    21: "FTP",
+    22: "SSH",
+    23: "Telnet",
+    25: "SMTP",
+    53: "DNS",
+    80: "HTTP",
+    110: "POP3",
+    143: "IMAP",
+    443: "HTTPS",
+    465: "SMTP Seguro",
+    587: "SMTP (submission)",
+    993: "IMAPS",
+    995: "POP3S",
+    1433: "SQL Server",
+    3306: "MySQL",
+    3389: "RDP",
+    5432: "PostgreSQL",
+    5900: "VNC",
+    8080: "HTTP Proxy",
+    8443: "HTTPS Alterno",
+    9200: "Elasticsearch",
+}
+
+# ---------- ICMPv6 ---------------
+ICMPV6_TYPE_TABLA = {
+    1: "Destination Unreachable",
+    2: "Packet Too Big",
+    3: "Time Exceeded",
+    4: "Parameter Problem",
+    100: "Private Experimentation",
+    101: "Private Experimentation",
+    102: "Reserved for expansion of ICMPv6 error messages",
+    103: "Reserved for expansion of ICMPv6 error messages",
+    104: "Reserved for expansion of ICMPv6 error messages",
+    105: "Reserved for expansion of ICMPv6 error messages",
+    106: "Reserved for expansion of ICMPv6 error messages",
+    107: "Reserved for expansion of ICMPv6 error messages",
+    128: "Echo Request (ping)",
+    129: "Echo Reply (ping response)",
+    130: "Multicast Listener Query",
+    131: "Multicast Listener Report",
+    132: "Multicast Listener Done",
+    133: "Router Solicitation",
+    134: "Router Advertisement",
+    135: "Neighbor Solicitation",
+    136: "Neighbor Advertisement",
+    137: "Redirect Message",
+    138: "Router Renumbering",
+    139: "ICMP Node Information Query",
+    140: "ICMP Node Information Response",
+    141: "Inverse Neighbor Discovery Solicitation",
+    142: "Inverse Neighbor Discovery Advertisement",
+    143: "Multicast Router Advertisement",
+    144: "Multicast Router Solicitation",
+    145: "Multicast Router Termination",
+    146: "FQ Proxy for IPv6",
+    147: "An IPv6 Locator Update Message",
+    148: "EXTECHO (Extended ECHO)",
+    149: "EXTECHO REPLY",
+    150: "Multicast Router Renumbering",
+    151: "Router Renumbering Command",
+    152: "Router Renumbering Result",
+    153: "Seismic Discovery Message",
+    154: "Robustness Protocol Advertisement",
+}
+
+ICMPV6_CODE_TABLA = {
+    # Destination Unreachable (Type 1)
+    (1, 0): "No route to destination",
+    (1, 1): "Communication with destination administratively prohibited",
+    (1, 2): "Beyond scope of source address",
+    (1, 3): "Address unreachable",
+    (1, 4): "Port unreachable",
+    (1, 5): "Source address failed ingress/egress policy",
+    (1, 6): "Reject route to destination",
+    
+    # Packet Too Big (Type 2)
+    (2, 0): "Packet Too Big",
+    
+    # Time Exceeded (Type 3)
+    (3, 0): "Hop limit exceeded in transit",
+    (3, 1): "Fragment reassembly time exceeded",
+    
+    # Parameter Problem (Type 4)
+    (4, 0): "Erroneous header field encountered",
+    (4, 1): "Unrecognized next header type encountered",
+    (4, 2): "Unrecognized IPv6 option encountered",
+    
+    # Echo Request/Reply (Types 128/129)
+    (128, 0): "Echo request",
+    (129, 0): "Echo reply",
+}

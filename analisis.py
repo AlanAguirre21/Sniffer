@@ -1,11 +1,11 @@
-from scapy.all import IP, TCP, UDP, ICMP, ARP, Ether, RARP, IGMP, GRE, IPv6, ESP, AH, DCCP, SCTP
+from scapy.all import IP, TCP, UDP, ICMP, ARP, Ether, RARP, IGMP, GRE, IPv6, ESP, AH, DCCP, SCTP, RSVP, HIP, ICMPv6
 from datetime import datetime
 
-from protocol_map import *
 from capture import _obtener_layer_3, _obtener_endpoints
-from protocols.layer_2 import _analizar_ethernet
-from protocols.layer_3_principal import _analizar_arp, _analizar_ip, _analizar_ipv6, _analizar_rarp
-from protocols.layer_4 import _analizar_tcp, _analizar_udp, _analizar_dccp, _analizar_sctp
+from protocols.layer_2 import *
+from protocols.layer_3_principal import *
+from protocols.layer_3_encapsulated import *
+from protocols.layer_4 import *
 
 # CLASE PRINCIPAL
 class Analisis:
@@ -34,42 +34,48 @@ class Analisis:
 
             # Capa 2
             if layer_name == Ether:
-                _analizar_ethernet(layer)
+                analizar_ethernet(layer)
             
             # Capa 3
             elif layer_name == IP:
-                _analizar_ip(layer)
+                analizar_ip(layer)
             elif layer_name == IPv6:
-                _analizar_ipv6(layer)
+                analizar_ipv6(layer)
             elif layer_name == ARP:
-                _analizar_arp(layer)
+                analizar_arp(layer)
             elif layer.name == RARP:
-                _analizar_rarp(layer)
+                analizar_rarp(layer)
             
             # Capa 3 - Encapsulados
-                # IGMP, GRE, ESP, AH, IPIP, DCCP, RSVP, HIP, 
+                # IGMP, GRE, ESP, AH, IPIP, RSVP, HIP, 
                 # ICMPv6, ESP, AH, GRE
-            elif layer_name == GRE:
-                Analisis._analizar_gre(layer)
             elif layer_name == IGMP:
-                Analisis._analizar_igmp(layer)
+                analizar_igmp(layer)
             elif layer_name == ICMP:
-                Analisis._analizar_icmp(layer)
+                analizar_icmp(layer)
+            elif layer_name == ICMPv6:
+                analizar_icmpv6(layer)
             elif layer_name == ESP:
-                Analisis._analizar_esp(layer)
+                analizar_esp(layer)
             elif layer_name == AH:
-                Analisis._analizar_ah(layer)
-                
+                analizar_ah(layer)
+            elif layer_name == RSVP:
+                analizar_rsvp(layer)
+            elif layer_name == HIP:
+                analizar_hip(layer)
+            elif layer_name == GRE:
+                analizar_gre(layer)   
+             
             # Capa 4
                 # SCTP, DCCP - Dentro de Capa 3 IP o IPv6
             elif layer_name == TCP:
-                _analizar_tcp(layer)
+                analizar_tcp(layer)
             elif layer_name == UDP:
-                _analizar_udp(layer)
+                analizar_udp(layer)
             elif layer_name == DCCP:
-                _analizar_udp(layer)
+                analizar_udp(layer)
             elif layer_name == SCTP:
-                _analizar_sctp(layer)
+                analizar_sctp(layer)
                 
             # Capa 7 TCP
                 # HTTP, HTTPS, FTP, SFTP, SSH, Telnet, SMTP, POP3, IMAP, LDAP, Kerberos, VNC
@@ -114,364 +120,7 @@ class Analisis:
         print("=" * 75)
 
 
-    # ANALIZADORES SEMANTICOS POR CAPA    
-    @staticmethod
-    def _analizar_icmp(capa):
-        SEP = "  " + "." * 58
-        tipos_icmp = {
-            0:  "Echo Reply (respuesta a ping)",
-            3:  "Destination Unreachable (destino inalcanzable)",
-            5:  "Redirect (redireccion)",
-            8:  "Echo Request (ping)",
-            11: "Time Exceeded (TTL agotado en transito)",
-            12: "Parameter Problem",
-        }
-        tipo_desc = tipos_icmp.get(capa.type, f"Tipo {capa.type}")
-        print(f"  [TYP]  Tipo ICMP       : {capa.type}  ->  {tipo_desc}")
-        print(f"  [COD]  Codigo          : {capa.code}")
-        print(SEP)
-        print(f"  [CHK]  Checksum        : 0x{capa.chksum:04X}")
-
-    # --------------------------------------------------------------------------
-
-    
-    # --------------------------------------------------------------------------
-
-    @staticmethod
-    def _analizar_igmp(capa):
-        """
-        Datagrama IGMP - Internet Group Management Protocol
-        Campos: TYPE CODE CHECKSUM GROUP_ADDR (VERSION RESP_TIME para IGMPv2/v3)
-        """
-        SEP = "  " + "." * 58
-
-        # TYPE
-        igmp_type = capa.type
-        igmp_type_desc = IGMP_TYPE_TABLA.get(igmp_type, f"Tipo IGMP {igmp_type}  desconocido")
-        print(f"  [TYPE]   Tipo IGMP      : {igmp_type}  (8 bits)")
-        print(f"            Descripción   : {igmp_type_desc}")
-        print(SEP)
-
-        # CODE (usado en IGMPv3)
-        code = capa.code if hasattr(capa, 'code') else 0
-        print(f"  [CODE]   Código         : {code}  (8 bits)")
-        print(f"            (utilizado en IGMPv3 para subtipos)")
-        print(SEP)
-
-        # CHECKSUM
-        chk = capa.chksum
-        print(f"  [CHKS]   Suma verific.  : 0x{chk:04X}  (16 bits)")
-        print(f"            CRC del mensaje IGMP")
-        print(SEP)
-
-        # GROUP ADDRESS
-        group_addr = capa.gaddr if hasattr(capa, 'gaddr') else "N/A"
-        if group_addr != "N/A":
-            grupo_desc = Analisis._tipo_multicast(group_addr)
-            print(f"  [GROUP]  Dir. Grupo     : {group_addr}  (32 bits)")
-            print(f"            Tipo          : {grupo_desc}")
-        print(SEP)
-
-        # Max Response Time (IGMPv2/v3)
-        if hasattr(capa, 'mrtime'):
-            mrtime = capa.mrtime
-            tiempo_ms = mrtime * 100  # En unidades de 100ms
-            print(f"  [MRTIME] T. Resp. Max   : {mrtime}  ({tiempo_ms} ms)  (8 bits)")
-            print(f"            Tiempo máximo para responder (IGMPv2+)")
-            print(SEP)
-
-        # Number of Sources (IGMPv3)
-        if hasattr(capa, 'numsrc'):
-            numsrc = capa.numsrc
-            print(f"  [NUMSRC] Num. Fuentes   : {numsrc}  (16 bits)")
-            print(f"            Número de direcciones de fuente (IGMPv3)")
-            print(SEP)
-
-        # Source Addresses (IGMPv3)
-        if hasattr(capa, 'srcaddr') and capa.srcaddr:
-            print(f"  [SRC]    Dir. Fuentes   : (IGMPv3)")
-            for i, src in enumerate(capa.srcaddr, 1):
-                print(f"            {i}. {src}")
-            print(SEP)
-
-        # Auxiliary Data (IGMPv3)
-        if hasattr(capa, 'auxdata') and capa.auxdata:
-            auxdata = capa.auxdata
-            print(f"  [AUX]    Datos Auxiliar : {len(auxdata)} Bytes  (IGMPv3)")
-            print(f"            Datos adicionales del mensaje")
-            print(SEP)
-
-        # Determinar versión IGMP
-        version = "IGMPv1"
-        if hasattr(capa, 'mrtime'):
-            version = "IGMPv2"
-        if hasattr(capa, 'numsrc'):
-            version = "IGMPv3"
-
-        print(f"  [INFO]   Protocolo IGMP : {version}")
-        print(f"            Gestión de grupos multicast (Capa 3)")
-
-    # --------------------------------------------------------------------------
-    
-    @staticmethod
-    def _analizar_gre(capa):
-        """
-        Datagrama GRE - Generic Routing Encapsulation
-        Campos: FLAGS VERSION PROTOCOL CHECKSUM OFFSET KEY SEQUENCE ROUTING
-        """
-        SEP = "  " + "." * 58
-
-        # FLAGS
-        flags = capa.flags
-        chksum_present = (flags >> 15) & 1
-        routing_present = (flags >> 14) & 1
-        key_present = (flags >> 13) & 1
-        seqnum_present = (flags >> 12) & 1
-        reserved = (flags >> 11) & 1
-        ack_present = (flags >> 10) & 1
-        print(f"  [FLAGS]  Banderas       : 0x{flags:04X}  ({flags:016b}b)  (16 bits)")
-        print(f"            C (Checksum) : {chksum_present}  ->  {'Checksum presente' if chksum_present else 'Sin checksum'}")
-        print(f"            R (Routing)  : {routing_present}  ->  {'Routing presente' if routing_present else 'Sin routing'}")
-        print(f"            K (Key)      : {key_present}  ->  {'Key presente' if key_present else 'Sin key'}")
-        print(f"            S (Sequence) : {seqnum_present}  ->  {'Número de secuencia presente' if seqnum_present else 'Sin secuencia'}")
-        print(f"            R (Reserved) : {reserved}")
-        print(f"            A (Ack)      : {ack_present}  ->  {'ACK presente' if ack_present else 'Sin ACK'}")
-        print(SEP)
-
-        # VERSION
-        version = capa.version
-        version_desc = GRE_VERSION_TABLA.get(version, f"Versión {version}  desconocida")
-        print(f"  [VERS]   Versión        : {version}  (3 bits)")
-        print(f"            Descripción   : {version_desc}")
-        print(SEP)
-
-        # PROTOCOL
-        proto = capa.proto
-        proto_desc = GRE_PROTOCOL_TABLA.get(proto, f"Protocolo 0x{proto:04X}  (ver RFC)")
-        print(f"  [PROTO]  Protocolo      : 0x{proto:04X}  (16 bits)")
-        print(f"            Descripción   : {proto_desc}")
-        print(SEP)
-
-        # CHECKSUM (si está presente)
-        if chksum_present:
-            chk = capa.chksum if hasattr(capa, 'chksum') else 0
-            print(f"  [CHKS]   Suma verific.  : 0x{chk:04X}  (16 bits)")
-            print(f"            CRC del encabezado y payload GRE")
-            print(SEP)
-            
-            # OFFSET (si checksum está presente)
-            if hasattr(capa, 'offset'):
-                offset = capa.offset
-                print(f"  [OFFSET] Desplazamiento : {offset}  (16 bits)")
-                print(f"            Offset del campo de routing")
-                print(SEP)
-
-        # KEY (si está presente)
-        if key_present:
-            key = capa.key if hasattr(capa, 'key') else 0
-            print(f"  [KEY]    Clave          : 0x{key:08X}  (32 bits)")
-            print(f"            Identificador de flujo o túnel")
-            print(SEP)
-
-        # SEQUENCE NUMBER (si está presente)
-        if seqnum_present:
-            seq = capa.seqence if hasattr(capa, 'seqence') else 0
-            print(f"  [SEQ]    Núm. Secuencia : {seq}  (32 bits)")
-            print(f"            Número de secuencia del paquete")
-            print(SEP)
-
-        # ACKNOWLEDGEMENT (si está presente)
-        if ack_present:
-            ack = capa.ack if hasattr(capa, 'ack') else 0
-            print(f"  [ACK]    Reconocimiento : {ack}  (32 bits)")
-            print(f"            Número ACK (confirmación recibida hasta)")
-            print(SEP)
-
-        # ROUTING (si está presente)
-        if routing_present:
-            print(f"  [ROUT]   Información Rut: (presente)")
-            print(f"            Datos de encaminamiento específicos del protocolo")
-            print(SEP)
-
-        print(f"  [INFO]   GRE es un protocolo de tunelización genérico")
-        print(f"            Encapsula otros protocolos (IP, IPX, etc.)")
-        print(f"            Usado en VPNs y conectividad entre redes")
-
-    # --------------------------------------------------------------------------
-    @staticmethod
-    def _analizar_esp(capa):
-        """
-        Datagrama ESP - Encapsulating Security Payload (IPSec)
-        Campos: SPI SEQUENCE_NUMBER PAYLOAD IV TRAILER AUTH_TAG
-        """
-        SEP = "  " + "." * 58
-
-        # SECURITY PARAMETERS INDEX (SPI)
-        spi = capa.spi if hasattr(capa, 'spi') else 0
-        print(f"  [SPI]    Índice Parámetros: 0x{spi:08X}  (32 bits)")
-        print(f"            Security Parameters Index")
-        print(f"            Identifica la asociación de seguridad (SA)")
-        print(SEP)
-
-        # SEQUENCE NUMBER
-        seq = capa.seq if hasattr(capa, 'seq') else 0
-        print(f"  [SEQ]    Núm. Secuencia  : {seq}  (32 bits)")
-        print(f"            Previene replay attacks")
-        print(f"            Se incrementa con cada paquete ESP")
-        print(SEP)
-
-        # PAYLOAD DATA (encriptado)
-        if hasattr(capa, 'data'):
-            payload = capa.data
-            payload_len = len(payload) if payload else 0
-            print(f"  [PAY]    Datos Encriptados: {payload_len} Bytes")
-            print(f"            Contenido cifrado (IP, TCP, UDP, etc.)")
-            print(f"            No se puede interpretar sin la clave de desencriptación")
-            print(SEP)
-        else:
-            print(f"  [PAY]    Datos Encriptados: (presentes)")
-            print(f"            No se puede interpretar sin la clave de desencriptación")
-            print(SEP)
-
-        # INITIALIZATION VECTOR (IV) - si está presente
-        if hasattr(capa, 'iv') and capa.iv:
-            iv = capa.iv
-            print(f"  [IV]     Vector Inicial  : 0x{iv.hex() if isinstance(iv, bytes) else iv}  (variable)")
-            print(f"            Necesario para algunos algoritmos de cifrado")
-            print(f"            (DES, 3DES, AES en modo CBC)")
-            print(SEP)
-
-        # PADDING
-        if hasattr(capa, 'pad'):
-            pad = capa.pad if capa.pad else 0
-            print(f"  [PAD]    Relleno         : {pad} Bytes")
-            print(f"            Para alinear a múltiplo de 4 bytes")
-            print(SEP)
-
-        # PAD LENGTH
-        if hasattr(capa, 'padlen'):
-            padlen = capa.padlen
-            print(f"  [PADLEN] Long. Relleno   : {padlen}  (8 bits)")
-            print(f"            Longitud del relleno en bytes")
-            print(SEP)
-
-        # NEXT HEADER
-        if hasattr(capa, 'nh'):
-            nh = capa.nh
-            nh_desc = PROTOCOLO_TABLA.get(nh, f"Protocolo {nh}  desconocido")
-            print(f"  [NH]     Próx. Encabezado: {nh}  (8 bits)")
-            print(f"            Protocolo encapsulado: {nh_desc}")
-            print(f"            (descifrará al desencriptar)")
-            print(SEP)
-
-        # AUTHENTICATION TAG
-        if hasattr(capa, 'icv') and capa.icv:
-            icv = capa.icv
-            icv_len = len(icv) if isinstance(icv, bytes) else len(str(icv))
-            print(f"  [AUTH]   Tag Autenticación: {icv_len} Bytes")
-            print(f"            ICV (Integrity Check Value)")
-            print(f"            Valida integridad y autenticidad del paquete")
-            print(f"            Generado por el algoritmo de autenticación (HMAC)")
-            print(SEP)
-
-        # INFORMACIÓN GENERAL
-        print(f"  [INFO]   ESP proporciona confidencialidad e integridad")
-        print(f"            Encripta el payload completo")
-        print(f"            Autentica encabezado + payload")
-        print(f"            Parte del protocolo IPSec (junto con AH)")
-        print(f"")
-        print(f"  [NOTA]   Los datos encriptados NO se pueden analizar")
-        print(f"            sin las claves de desencriptación y autenticación")
-
-    # --------------------------------------------------------------------------
-    @staticmethod
-    def _analizar_ah(capa):
-        """
-        Datagrama AH - Authentication Header (IPSec)
-        Campos: NEXT_HEADER PAYLOAD_LEN RESERVED SPI SEQUENCE_NUMBER AUTH_DATA
-        """
-        SEP = "  " + "." * 58
-
-        # NEXT HEADER
-        nh = capa.nh if hasattr(capa, 'nh') else 0
-        nh_desc = PROTOCOLO_TABLA.get(nh, f"Protocolo {nh}  desconocido")
-        print(f"  [NH]     Próx. Encabezado: {nh}  (8 bits)")
-        print(f"            Protocolo encapsulado: {nh_desc}")
-        print(f"            (IP, ICMP, TCP, UDP, ESP, etc.)")
-        print(SEP)
-
-        # PAYLOAD LENGTH
-        plen = capa.len if hasattr(capa, 'len') else 0
-        payload_bytes = (plen + 2) * 4
-        print(f"  [PLEN]   Long. Payload   : {plen}  (8 bits)")
-        print(f"            Longitud en unidades de 32 bits")
-        print(f"            Tamaño real del encabezado AH: {payload_bytes} Bytes")
-        print(SEP)
-
-        # RESERVED
-        reserved = capa.reserved if hasattr(capa, 'reserved') else 0
-        print(f"  [RSVD]   Reservado       : 0x{reserved:04X}  (16 bits)")
-        print(f"            Debe ser cero, reservado para uso futuro")
-        print(SEP)
-
-        # SECURITY PARAMETERS INDEX (SPI)
-        spi = capa.spi if hasattr(capa, 'spi') else 0
-        print(f"  [SPI]    Índice Parámetros: 0x{spi:08X}  (32 bits)")
-        print(f"            Security Parameters Index")
-        print(f"            Identifica la asociación de seguridad (SA)")
-        print(f"            Combinado con dirección destino, identifica única SA")
-        print(SEP)
-
-        # SEQUENCE NUMBER
-        seq = capa.seq if hasattr(capa, 'seq') else 0
-        print(f"  [SEQ]    Núm. Secuencia  : {seq}  (32 bits)")
-        print(f"            Previene ataques de repetición (replay attacks)")
-        print(f"            Se incrementa con cada paquete AH")
-        print(f"            Rango: 0 a 2^32-1 (se reinicia en SA nueva)")
-        print(SEP)
-
-        # AUTHENTICATION DATA / INTEGRITY CHECK VALUE (ICV)
-        if hasattr(capa, 'icv') and capa.icv:
-            icv = capa.icv
-            icv_len = len(icv) if isinstance(icv, bytes) else len(str(icv))
-            print(f"  [AUTH]   Datos Autenticación: {icv_len} Bytes")
-            print(f"            ICV (Integrity Check Value)")
-            print(f"            Hash HMAC del encabezado + payload")
-            if icv_len == 12:
-                print(f"            Tipo: HMAC-SHA-96 (truncado a 96 bits)")
-            elif icv_len == 16:
-                print(f"            Tipo: HMAC-MD5-128 o HMAC-SHA-128")
-            elif icv_len == 20:
-                print(f"            Tipo: HMAC-SHA-160 (20 bytes)")
-            elif icv_len == 32:
-                print(f"            Tipo: HMAC-SHA-256 (completo)")
-            print(f"            Valida integridad de TODO el paquete IP")
-            print(SEP)
-        else:
-            print(f"  [AUTH]   Datos Autenticación: (presentes)")
-            print(f"            ICV (Integrity Check Value)")
-            print(f"            Valida integridad de TODO el paquete IP")
-            print(SEP)
-
-        # INFORMACIÓN DE ESTRUCTURA
-        print(f"  [STRUCT] Encabezado AH   : {payload_bytes} Bytes")
-        print(f"            Campos fijos   : 12 Bytes (NH + PLEN + RSVD + SPI + SEQ)")
-        print(f"            Auth Data      : {payload_bytes - 12} Bytes")
-        print(SEP)
-
-        # INFORMACIÓN GENERAL
-        print(f"  [INFO]   AH proporciona autenticación e integridad")
-        print(f"            NO encripta el payload (solo autentica)")
-        print(f"            Autentica: encabezado IP + payload + AH")
-        print(f"            Parte del protocolo IPSec (junto con ESP)")
-        print(f"")
-        print(f"  [DIFER]  AH vs ESP:")
-        print(f"            • AH: autentica pero NO cifra")
-        print(f"            • ESP: autentica Y cifra")
-        print(f"            • Pueden usarse juntos (AH + ESP)")
-
-# ------------------------------------------------------------------------
-
+    # ANALIZADORES SEMANTICOS POR CAPA       
     @staticmethod
     def _analizar_generico(capa):
         """Fallback: muestra campos crudos para capas no especificas."""
@@ -487,7 +136,6 @@ class Analisis:
 
 
 # HELPERS INTERNOS
-
 def _interpretar_mac(mac):
     """
     Interpreta los bits I/G y U/L del primer octeto de la MAC.
@@ -628,3 +276,8 @@ def _tipo_multicast(direccion):
         return "No es multicast"
     except:
         return "Dirección inválida"
+
+# Función auxiliar para obtener servicio del puerto
+def obtener_servicio_puerto(puerto):
+    """Devuelve el servicio asociado a un puerto TCP común"""
+    return puerto_servicio.get(puerto, "Desconocido")
